@@ -1,0 +1,44 @@
+
+------ LOGO RETENTION % DAX ------
+
+Customer Logo Retention % = 
+VAR selectedFutureMonth = SELECTEDVALUE('Future Months'[Value])
+VAR Result = DIVIDE(
+  CALCULATE(
+    DISTINCTCOUNT(tblCustomers[customer_id]),
+    FILTER(tblCustomers, tblCustomers[cohortMonths] >= selectedFutureMonth)),
+    DISTINCTCOUNT(tblCustomers[customer_id]))
+RETURN
+IF(AND(selectedFutureMonth > MAX(tblCustomers[customermonths]), Result = 0), BLANK(), IF(AND(selectedFutureMonth <= MAX(tblCustomers[customermonths]), Result = 0),0,Result))
+
+------ LOGO RETENTION DAX ------
+
+Customer Logo Retention = 
+VAR selectedFutureMonth = SELECTEDVALUE('Future Months'[Value])
+VAR Result =
+  CALCULATE(
+    DISTINCTCOUNT(tblCustomers[customer_id]),
+    FILTER(tblCustomers, tblCustomers[cohortMonths] >= selectedFutureMonth))
+RETURN
+IF(AND(selectedFutureMonth > MAX(tblCustomers[customermonths]), Result = 0), BLANK(), IF(AND(selectedFutureMonth <= MAX(tblCustomers[customermonths]), Result = 0),0,Result))
+
+------ TIME SERIES COLUMN DAX -----
+
+newMonthYear = CALCULATE( SELECTEDVALUE(Dates[Month & Year]), FILTER(ALL(Dates), Dates[Date] = tblCustomers[new_business_cohort]))
+newYearMonthNumber = VALUE(FORMAT(tblCustomers[new_business_cohort], "yyyymm"))
+newYearMonthOrder = RANKX(tblCustomers,[newYearMonthNumber],,ASC,Dense)
+
+cancelMonthYear = CALCULATE( SELECTEDVALUE(Dates[Month & Year]), FILTER(ALL(Dates), Dates[Date] = tblCustomers[cancelCohort]))
+cancelYearMonthNumber = IF( NOT(ISBLANK(tblCustomers[cancelCohort])), VALUE(FORMAT(tblCustomers[cancelCohort],"yyyymm")), BLANK())
+
+customerCancelMonths = DATEDIFF(tblCustomers[new_business_cohort], tblCustomers[cancelCohort],MONTH)
+EOMToday = EOMONTH(TODAY(),0)
+
+customerMonths = DATEDIFF(tblCustomers[new_business_cohort], tblCustomers[EOMToday],MONTH)
+cohortMonths = IF(ISBLANK(tblCustomers[customerCancelMonths]), tblCustomers[customerMonths], IF(tblCustomers[customerMonths] >= tblCustomers[customerCancelMonths], tblCustomers[customerCancelMonths],tblCustomers[customerMonths]))
+
+newQTRYear = CALCULATE( SELECTEDVALUE(Dates[Quarter & Year]), FILTER(ALL(Dates), Dates[Date] = tblCustomers[new_business_cohort]))
+
+
+------ DATE TABLE REQUIRED FOR ABOVE FROM ENTERPRISE DNA LINK BELOW ------
+https://forum.enterprisedna.co/t/extended-date-table-power-query-m-function/6390
